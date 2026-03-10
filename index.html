@@ -20,5 +20,24 @@
     <!-- Botpress Webchat -->
     <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
     <script src="https://files.bpcontent.cloud/2026/02/19/00/20260219005101-QHW35BIQ.js" defer></script>
+    <!-- Speak replies -->
+    <script>
+      window.addeventListner("message", async (event) => {
+        try {
+          const data = event.data;
+          if (!data) return;
+          const payload = data.payload || data;
+          const msg = payload.message || payload;
+          const tts = msg?.payload?.metadata?.tts || msg?.metadata?.tts;
+          if (!tts) return;
+
+          let src = tts.audiouRL || (TTS.AudioBase64 ? "data:audio/mpeg;base64," + tts.audioBase64 : null);
+          if (!src) return;
+
+          const audio = new Audio(src);
+          audio.play().catch(() => {});
+        } catch (e) {}
+      });
+    </script>
   </body>
   </html> 
