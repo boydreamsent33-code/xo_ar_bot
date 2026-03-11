@@ -22,55 +22,51 @@
 <script src="https://files.bpcontent.cloud/2026/02/19/00/20260219005101-QHW35BIQ.js" defer></script>
     
     
-<!-- Speak replies (ElevenLabs TTS) -->
 <script>
 (() => {
-  // prevent double init
-  if (window.__bpTtsInstalled) return;
-  window.__bpTtsInstalled = true;
-
-  // Browsers block autoplay until user interacts once
+  // browsers block autoplay until user interacts once
   let canPlay = false;
-  const enableAudio = () => { canPlay = true; };
-  window.addEventListener("click", enableAudio, { once: true });
-  window.addEventListener("keydown", enableAudio, { once: true });
+  const enable = () => { canPlay = true; };
+  window.addEventListener("click", enable, { once: true });
+  window.addEventListener("keydown", enable, { once: true });
 
-  function getAudioSrc(tts) {
-    if (!tts) return null;
-    const url = tts.audioURL || tts.audioUrl || tts.url;
-    if (url) return url;
-
-    const b64 = tts.audioBase64 || tts.audiobase64;
-    if (b64) return `data:audio/mpeg;base64,${b64}`;
-
-    return null;
+  function getTts(msg){
+    return msg?.payload?.metadata?.tts || msg?.metadata?.tts || msg?.payload?.tts || null;
   }
 
-  function playAudio(src) {
-    if (!src || !canPlay) return;
-    try {
-      const audio = new Audio(src);
-      audio.play().catch(() => {});
-    } catch (e) {}
+  function playFromTts(tts){
+    if (!canPlay || !tts) return;
+    const src =
+      tts.audioUrl || tts.url ||
+      (tts.audioBase64 || tts.audiobase64
+        ? `data:audio/mpeg;base64,${tts.audioBase64 || tts.audiobase64}`
+        : null);
+    if (!src) return;
+    const a = new Audio(src);
+    a.play().catch(() => {});
   }
 
-  function handleMessage(evt) {
-    // Botpress message object usually has metadata
-    const msg = evt?.payload ?? evt;
-    const tts = msg?.metadata?.tts || msg?.payload?.metadata?.tts;
-    const src = getAudioSrc(tts);
-    playAudio(src);
+  function handle(evt){
+    const msg = evt?.message || evt?.payload?.message || evt?.payload || evt;
+    playFromTts(getTts(msg));
   }
 
-  // Wait for Botpress webchat runtime
-  const wait = setInterval(() => {
-    if (window.botpress && typeof window.botpress.on === "function") {
-      clearInterval(wait);
-      window.botpress.on("message", handleMessage);
+  const attach = () => {
+    if (window.botpressWebChat?.onEvent) {
+      window.botpressWebChat.onEvent((e) => {
+        if (e?.type === "MESSAGE_RECEIVED") handle(e?.value || e);
+      }, ["MESSAGE_RECEIVED"]);
+      return true;
     }
-  }, 100);
+    if (window.botpress?.on) {
+      window.botpress.on("message", handle);
+      return true;
+    }
+    return false;
+  };
 
-  setTimeout(() => clearInterval(wait), 15000);
+  const t = setInterval(() => { if (attach()) clearInterval(t); }, 200);
+  setTimeout(() => clearInterval(t), 15000);
 })();
 </script>
   </body>
